@@ -1,0 +1,4 @@
+{
+    "board": "m5stack:esp32:cardputer",
+    "port": "COM4"
+}
